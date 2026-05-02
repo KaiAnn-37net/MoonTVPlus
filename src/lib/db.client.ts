@@ -824,6 +824,42 @@ export function getCachedPlayRecordsSnapshot(): Record<string, PlayRecord> {
   }
 }
 
+export function getCachedMangaReadRecordsSnapshot(): Record<string, MangaReadRecord> {
+  if (typeof window === 'undefined') {
+    return {};
+  }
+
+  if (STORAGE_TYPE !== 'localstorage') {
+    const cachedRecords = cacheManager.getCachedMangaReadRecords();
+    if (cachedRecords) {
+      return cachedRecords;
+    }
+
+    try {
+      const username = getAuthInfoFromBrowserCookie()?.username;
+      if (!username) return {};
+
+      const raw = localStorage.getItem(`${CACHE_PREFIX}${username}`);
+      if (!raw) return {};
+
+      const userCache = JSON.parse(raw) as UserCacheStore;
+      return userCache.mangaReadRecords?.data || {};
+    } catch (err) {
+      console.error('读取用户漫画历史快照失败:', err);
+      return {};
+    }
+  }
+
+  try {
+    const raw = localStorage.getItem(MANGA_HISTORY_KEY);
+    if (!raw) return {};
+    return JSON.parse(raw) as Record<string, MangaReadRecord>;
+  } catch (err) {
+    console.error('读取本地漫画历史快照失败:', err);
+    return {};
+  }
+}
+
 /**
  * 保存播放记录。
  * 数据库存储模式下使用乐观更新：先更新缓存（立即生效），再异步同步到数据库。
@@ -1965,7 +2001,8 @@ export type CacheUpdateEvent =
   | 'searchHistoryUpdated'
   | 'skipConfigsUpdated'
   | 'mangaShelfUpdated'
-  | 'mangaHistoryUpdated';
+  | 'mangaHistoryUpdated'
+  | 'bookHistoryUpdated';
 
 /**
  * 用于 React 组件监听数据更新的事件监听器
